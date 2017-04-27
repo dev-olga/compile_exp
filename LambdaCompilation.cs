@@ -18,13 +18,17 @@ namespace Lambda
         private static readonly string NamespaceName = "LambdaExp";
         private static readonly string ClassName = "LambdaClass";
 
-        //public static object CompileLambda(string lambdaExpression)
-        //{
-        //    string source = LambdaClassWrapper(
-        //       lambdaExpression);
-        //    CompilerResults results = CompileAssemblyFromSource(source);
-        //    return GetExpression<object>(results);
-        //}
+        public static Expression<Func<T, TResult>> CompileLambdaExpr<T, TResult>(string lambdaExpression)
+        {
+            string source = LambdaExprClassWrapper(
+               "Func<" + typeof(T) + ", " + typeof(TResult) + ">",
+                lambdaExpression);
+
+            CompilerResults results = CompileAssemblyFromSource(source);
+            return GetExpression<Expression<Func<T, TResult>>>(results);
+
+        }
+        
         public static Action<T> CompileLambda<T>(string lambdaExpression)
         {
             string source = LambdaClassWrapper(
@@ -85,7 +89,7 @@ namespace Lambda
             return null;
         }
 
-        private static string LambdaClassWrapper(string type,string exp)
+        private static string LambdaClassWrapper(string type, string exp)
         {
             string source =
                     "using System;" +
@@ -100,7 +104,8 @@ namespace Lambda
             return source;
         }
 
-        private static string LambdaClassWrapper(string exp)
+        //TODO: refactor
+        private static string LambdaExprClassWrapper(string type, string exp)
         {
             string source =
                     "using System;  using System.Linq.Expressions;" +
@@ -108,8 +113,8 @@ namespace Lambda
                     "{" +
                         "public class " + ClassName +
                         "{" +
-                            "Expression fieldExp = " + exp + "; " +
-                            "public Expression Prop {get { return fieldExp; }}" +
+                            "Expression<" + type + "> fieldExp = " + exp + "; " +
+                            "public Expression<" + type + "> Prop {get { return fieldExp; }}" +
                         "}" +
                     "}";
             return source;
