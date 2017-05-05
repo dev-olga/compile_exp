@@ -19,43 +19,40 @@ namespace Lambda
         private static readonly string NamespaceName = "LambdaExp";
         private static readonly string ClassName = "LambdaClass";
 
-        public static Expression<Func<T, TResult>> CompileLambdaExpr<T, TResult>(string lambdaExpression)
+        public static Expression<Func<T, TResult>> CompileLambdaExpr<T, TResult>(string lambdaString)
         {
-            string source = LambdaExprClassWrapper(
-               "Func<" + TypeToString(typeof(T)) + ", " + TypeToString(typeof(TResult)) + ">",
-                lambdaExpression);
+            string source = LambdaClassWrapper(GetFuncString<T, TResult>(), lambdaString, true);
 
             CompilerResults results = CompileAssemblyFromSource(source);
-            return GetExpression<Expression<Func<T, TResult>>>(results);
+            return GetLambda<Expression<Func<T, TResult>>>(results);
 
         }
         
-        public static Action<T> CompileLambda<T>(string lambdaExpression)
+        public static Action<T> CompileLambda<T>(string lambdaString)
         {
-            string source = LambdaClassWrapper(
-                "Action<" + TypeToString(typeof(T)) + ">",
-                lambdaExpression);
+            string source = LambdaClassWrapper("Action<" + TypeToString(typeof(T)) + ">", lambdaString);
 
             CompilerResults results = CompileAssemblyFromSource(source);
-            return GetExpression<Action<T>>(results);
+            return GetLambda<Action<T>>(results);
             
         }
 
-        public static Func<T, TResult> CompileLambda<T, TResult>(string lambdaExpression)
+        public static Func<T, TResult> CompileLambda<T, TResult>(string lambdaString)
         {
-            string source = LambdaClassWrapper("Func<" + TypeToString(typeof(T)) + ", " + TypeToString(typeof(TResult)) + ">", lambdaExpression);
+            string source = LambdaClassWrapper(GetFuncString<T, TResult>(), lambdaString);
 
             CompilerResults results = CompileAssemblyFromSource(source);
-            return GetExpression<Func<T, TResult>>(results);
+            return GetLambda<Func<T, TResult>>(results);
         }
 
         private static string TypeToString(Type type)
         {
             var res = type.ToString();
-            res = (new Regex(@"`\d+\[")).Replace(res, "<");
-            res = (new Regex(@"\]")).Replace(res, ">");
+            res = new Regex(@"`\d+\[").Replace(res, "<");
+            res = new Regex(@"\]").Replace(res, ">");
             return res;
         }
+
         private static CompilerResults CompileAssemblyFromSource(string source)
 
         {
@@ -79,7 +76,7 @@ namespace Lambda
             return results;
         }
 
-        private static T GetExpression<T>(CompilerResults results)
+        private static T GetLambda<T>(CompilerResults results)
             where T: class
         {
             if (!results.Errors.HasErrors && !results.Errors.HasWarnings)
@@ -97,35 +94,30 @@ namespace Lambda
             return null;
         }
 
-        private static string LambdaClassWrapper(string type, string exp)
+        private static string LambdaClassWrapper(string type, string exp, bool expression = false)
         {
             string source =
                     "using System;" +
+                    "using System.Linq.Expressions;" +
                     "namespace " + NamespaceName +
                     "{" +
                         "public class " + ClassName +
                         "{" +
-                            type + " field = "+ exp+"; " +
-                            "public "+ type+" Prop {get { return field; }}" +
+                            (expression ? ExpressionWrapper(type) : type) + " field = " + exp+"; " +
+                            "public "+ (expression ? ExpressionWrapper(type) : type) + " Prop {get { return field; }}" +
                         "}" +
                     "}";
             return source;
         }
 
-        //TODO: refactor
-        private static string LambdaExprClassWrapper(string type, string exp)
+        private static string ExpressionWrapper(string type)
         {
-            string source =
-                    "using System;  using System.Linq.Expressions;" +
-                    "namespace " + NamespaceName +
-                    "{" +
-                        "public class " + ClassName +
-                        "{" +
-                            "Expression<" + type + "> fieldExp = " + exp + "; " +
-                            "public Expression<" + type + "> Prop {get { return fieldExp; }}" +
-                        "}" +
-                    "}";
-            return source;
+            return "Expression<" + type + ">";
+        }
+
+        private static string GetFuncString<T, TResult>()
+        {
+            return "Func<" + TypeToString(typeof(T)) + ", " + TypeToString(typeof(TResult)) + ">";
         }
     }
 }
