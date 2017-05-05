@@ -9,6 +9,7 @@ namespace Lambda
     using System.CodeDom.Compiler;
     using System.Linq.Expressions;
     using System.Reflection;
+    using System.Text.RegularExpressions;
 
     using Microsoft.CSharp;
 
@@ -21,7 +22,7 @@ namespace Lambda
         public static Expression<Func<T, TResult>> CompileLambdaExpr<T, TResult>(string lambdaExpression)
         {
             string source = LambdaExprClassWrapper(
-               "Func<" + typeof(T) + ", " + typeof(TResult) + ">",
+               "Func<" + TypeToString(typeof(T)) + ", " + TypeToString(typeof(TResult)) + ">",
                 lambdaExpression);
 
             CompilerResults results = CompileAssemblyFromSource(source);
@@ -32,7 +33,7 @@ namespace Lambda
         public static Action<T> CompileLambda<T>(string lambdaExpression)
         {
             string source = LambdaClassWrapper(
-                "Action<" + typeof(T)+ ">",
+                "Action<" + TypeToString(typeof(T)) + ">",
                 lambdaExpression);
 
             CompilerResults results = CompileAssemblyFromSource(source);
@@ -42,12 +43,19 @@ namespace Lambda
 
         public static Func<T, TResult> CompileLambda<T, TResult>(string lambdaExpression)
         {
-            string source = LambdaClassWrapper("Func<" + typeof(T) + ", " + typeof(TResult) + ">", lambdaExpression);
+            string source = LambdaClassWrapper("Func<" + TypeToString(typeof(T)) + ", " + TypeToString(typeof(TResult)) + ">", lambdaExpression);
 
             CompilerResults results = CompileAssemblyFromSource(source);
             return GetExpression<Func<T, TResult>>(results);
         }
 
+        private static string TypeToString(Type type)
+        {
+            var res = type.ToString();
+            res = (new Regex(@"`\d+\[")).Replace(res, "<");
+            res = (new Regex(@"\]")).Replace(res, ">");
+            return res;
+        }
         private static CompilerResults CompileAssemblyFromSource(string source)
 
         {
